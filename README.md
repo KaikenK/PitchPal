@@ -6,56 +6,78 @@ A full-stack web-based database management application for connecting startups w
 
 ### 🚀 Founder Dashboard
 - Complete CRUD operations for startups
-- View matched investors based on domain
-- Create pitch proposals to investors
-- Track pitch statuses and funding rounds
-- Messaging with investors
+- Find and pitch to matched investors based on domain
+- View pitch statuses (Pending, Accepted, Rejected)
+- Track funding rounds and total funding
+- Two-way messaging with investors (after pitch acceptance)
+- Real-time statistics: Total Startups, Pending Pitches, Accepted Pitches, Messages
 
 ### 💼 Investor Dashboard
-- Browse startups in investment domains
-- View total investments and funding history
-- Invest in startups (with trigger validation)
-- Track pitch matches and responses
-- Messaging with founders
+- Browse startups in preferred investment domains
+- View funding opportunities with detailed startup information
+- Invest in startups (with automatic trigger validation for investment range)
+- Accept/Reject pitch proposals from founders
+- Track pitch matches and investment history
+- Two-way messaging with founders
+- Real-time statistics: Total Investments, Pending Pitches, Accepted Pitches, Messages
 
 ### ⚙️ Admin Dashboard
-- Approve/reject new investors
-- Moderate platform messages
-- View all system activities
-- Check investor approval status
-- Platform analytics and oversight
+- Approve/reject new investor registrations
+- View all pending and approved investor applications
+- Moderate platform messages (Approve, Flag for review, Delete)
+- View message moderation history with action types
+- Platform oversight and security management
 
 ### 📊 Analytics & Reports
-- Total startups per domain (aggregate queries)
-- Founder startup counts (using custom function)
+- **JOIN Query**: Startups with complete details (Founder + Domain info)
+- **AGGREGATE Query**: Total startups per domain with bar chart visualization
+- **NESTED Query**: Find all investors by domain with interactive dropdown
+- Domain-wise startup distribution
 - Latest funding rounds
-- Total funding per startup with progress
-- Top investors by investment amount
-- Funding trends over time
-- Startup stage distribution
-- Pitch match success rates
+- Pitch match statistics
+- Interactive data visualization with Recharts
+
+### 🔐 Authentication System
+- Separate login for Founders, Investors, and Admins
+- Secure password-based authentication
+- Protected routes with role-based access control
+- Registration system for new founders and investors
+- Email uniqueness validation
+
+### 💬 Messaging System
+- Direct messaging between founders and investors
+- Message moderation by admins
+- Sender/recipient tracking
+- Timestamp and moderation status display
+- Real-time message updates
 
 ## Technology Stack
 
 ### Backend
-- **Node.js** with **Express.js** - RESTful API server
-- **MySQL** - Relational database with stored procedures, functions, and triggers
-- **mysql2** - MySQL client for Node.js with Promise support
-- **CORS** - Cross-origin resource sharing
+- **Node.js v14+** with **Express.js 4.18** - RESTful API server
+- **MySQL2 3.6** - MySQL client with Promise support and prepared statements
+- **CORS** - Cross-origin resource sharing middleware
 - **dotenv** - Environment variable management
 
 ### Frontend
-- **React** - Component-based UI framework
-- **React Router** - Client-side routing
-- **Axios** - HTTP client for API calls
-- **Recharts** - Data visualization charts
-- **CSS3** - Responsive styling
+- **React 18** - Component-based UI with hooks
+- **React Router v6** - Client-side routing with protected routes
+- **Axios 1.6** - HTTP client for API calls
+- **Recharts 2.8** - Interactive data visualization
+- **CSS3** - Responsive styling with modern layouts
 
 ### Database
-- **MySQL** - Production-grade RDBMS
-- Stored procedures (sp_GetInvestorMatches, sp_CreatePitch)
-- Functions (fn_CheckInvestorApprovalStatus, fn_GetFounderStartupCount)
-- Triggers (funding validation, auto-approval, funding updates)
+- **MySQL 8.0** - Production-grade RDBMS with advanced features
+- **Stored Procedures**: 
+  - `sp_GetInvestorMatches(founder_id)` - Returns approved investors matching startup domains
+  - `sp_CreatePitch(founder_id, investor_id)` - Creates pitch with duplicate validation
+- **Stored Functions**:
+  - `fn_CheckInvestorApprovalStatus(investor_id)` - Returns approval status
+  - `fn_GetFounderStartupCount(founder_id)` - Returns startup count
+- **Triggers**:
+  - `trg_AfterInsertFundingRound` - Auto-updates startup total funding
+  - `trg_BeforeInsertFundingRound_CheckRange` - Validates investment within investor's range
+- **Complex Queries**: JOIN, AGGREGATE (GROUP BY + COUNT), NESTED (subqueries with IN)
 
 ## Project Structure
 
@@ -82,21 +104,29 @@ PitchPal/
 │   │   └── index.html           # HTML template
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── Home.js          # Landing page
-│   │   │   ├── FounderDashboard.js
-│   │   │   ├── InvestorDashboard.js
-│   │   │   ├── AdminDashboard.js
-│   │   │   └── Analytics.js     # Analytics dashboard
+│   │   │   ├── Home.js          # Landing page with role selection
+│   │   │   ├── Login.js         # Authentication page
+│   │   │   ├── Register.js      # User registration
+│   │   │   ├── FounderDashboard.js  # Founder workspace
+│   │   │   ├── InvestorDashboard.js # Investor workspace
+│   │   │   ├── AdminDashboard.js    # Admin panel
+│   │   │   └── Analytics.js     # Analytics & special reports
+│   │   ├── components/
+│   │   │   └── ProtectedRoute.js    # Route authentication
+│   │   ├── context/
+│   │   │   └── AuthContext.js   # Global auth state
 │   │   ├── services/
 │   │   │   └── api.js           # API client service
-│   │   ├── App.js               # Main App component
+│   │   ├── App.js               # Main App component & routing
 │   │   ├── App.css              # Global styles
 │   │   └── index.js             # React entry point
 │   └── package.json             # Frontend dependencies
 │
 ├── database/
-│   ├── schema.sql               # Database schema with procedures/functions
-│   └── seed.sql                 # Sample data
+│   ├── pitchpal.sql             # Complete DB: schema, data, procedures, functions, triggers
+│   ├── fix_procedures.sql       # Procedure update script
+│   ├── update_procedure.sql     # Procedure maintenance
+│   └── test_investor_matches.sql # Testing queries
 │
 ├── .env.example                 # Environment configuration template
 └── README.md                    # This file
@@ -130,16 +160,29 @@ brew services start mysql
 ```
 
 #### Create Database and Load Schema
+
+**Option 1: Using command line redirection (from PitchPal directory)**
 ```bash
-mysql -u root -p < database/schema.sql
-mysql -u root -p < database/seed.sql
+mysql -u root -p < database/pitchpal.sql
 ```
 
-Or using MySQL command line:
-```sql
-source /path/to/PitchPal/database/schema.sql;
-source /path/to/PitchPal/database/seed.sql;
+**Option 2: Using MySQL command line**
+```bash
+# First, login to MySQL
+mysql -u root -p
+
+# Then, once inside MySQL prompt:
 ```
+```sql
+source C:/Users/YOUR_USERNAME/path/to/PitchPal/database/pitchpal.sql;
+```
+
+**For Windows users:** Replace `/path/to/PitchPal` with your actual path using forward slashes (e.g., `C:/Users/dhruv/OneDrive/Desktop/DBMS/PitchPal/database/pitchpal.sql`)
+
+**Utility SQL Files:**
+- `fix_procedures.sql` - Recreates both stored procedures (use if procedures are missing)
+- `update_procedure.sql` - Updates `sp_GetInvestorMatches` with approval check
+- `test_investor_matches.sql` - Test queries to verify investor matching logic
 
 ### 3. Backend Setup
 
@@ -191,37 +234,42 @@ Frontend will run on `http://localhost:3000`
 - `GET /api/founder` - Get all founders
 - `GET /api/founder/:id` - Get founder by ID
 - `GET /api/founder/:id/startups` - Get founder's startups
-- `GET /api/founder/:id/startup-count` - Get startup count (uses function)
-- `GET /api/founder/:founderId/startup/:startupId/matches` - Get matched investors (uses stored procedure)
-- `GET /api/founder/:id/pitches` - Get founder's pitches
+- `GET /api/founder/:id/startup-count` - Get startup count (uses `fn_GetFounderStartupCount`)
+- `GET /api/founder/:id/matches` - Get matched investors (uses `sp_GetInvestorMatches`)
+- `GET /api/founder/:id/pitches` - Get founder's pitch history
 - `GET /api/founder/:id/messages` - Get founder's messages
 - `POST /api/founder` - Create new founder
 - `PUT /api/founder/:id` - Update founder
 - `DELETE /api/founder/:id` - Delete founder
 
 ### Investor Endpoints
-- `GET /api/investor` - Get all investors
+- `GET /api/investor` - Get all investors with approval status
 - `GET /api/investor/:id` - Get investor by ID
-- `GET /api/investor/:id/domains` - Get investor's domains
+- `GET /api/investor/:id/domains` - Get investor's domain preferences
 - `GET /api/investor/:id/startups` - Get startups in investor's domains
 - `GET /api/investor/:id/funding-rounds` - Get investor's funding history
-- `GET /api/investor/:id/total-investment` - Get total investments
-- `GET /api/investor/:id/approval-status` - Check approval status (uses function)
-- `GET /api/investor/:id/pitches` - Get investor's pitches
-- `POST /api/investor` - Create new investor
+- `GET /api/investor/:id/total-investment` - Get total investment amount
+- `GET /api/investor/:id/approval-status` - Check approval status (uses `fn_CheckInvestorApprovalStatus`)
+- `GET /api/investor/:id/pitches` - Get investor's received pitches
+- `GET /api/investor/:id/messages` - Get investor's messages
+- `POST /api/investor` - Create new investor (with domain assignment)
 - `POST /api/investor/:id/domains` - Add domain to investor
 - `PUT /api/investor/:id` - Update investor
 - `DELETE /api/investor/:id` - Delete investor
 
 ### Admin Endpoints
 - `GET /api/admin` - Get all admins
-- `GET /api/admin/approvals/pending` - Get pending approvals
-- `GET /api/admin/approvals/all` - Get all approvals
-- `POST /api/admin/approvals` - Create approval
-- `PUT /api/admin/approvals/:id` - Update approval
-- `GET /api/admin/messages/all` - Get all messages
+- `GET /api/admin/:id` - Get admin by ID
+- `GET /api/admin/approvals/pending` - Get pending investor approvals
+- `GET /api/admin/approvals/all` - Get all investor approvals
+- `POST /api/admin/approvals` - Create/approve investor
+- `GET /api/admin/messages/all` - Get all messages with sender/recipient names
 - `GET /api/admin/messages/unmoderated` - Get unmoderated messages
-- `POST /api/admin/messages/moderate` - Moderate message
+- `POST /api/admin/messages/moderate` - Moderate message (Approved/Flagged/Deleted)
+- `GET /api/admin/moderations/all` - Get moderation history
+- `POST /api/admin` - Create new admin
+- `PUT /api/admin/:id` - Update admin
+- `DELETE /api/admin/:id` - Delete admin
 
 ### Startup Endpoints
 - `GET /api/startup` - Get all startups
@@ -239,42 +287,109 @@ Frontend will run on `http://localhost:3000`
 
 ### PitchMatch Endpoints
 - `GET /api/pitchmatch` - Get all pitch matches
-- `POST /api/pitchmatch` - Create pitch (uses stored procedure)
-- `PUT /api/pitchmatch/:id` - Update pitch status
+- `GET /api/pitchmatch/:id` - Get pitch match by ID
+- `POST /api/pitchmatch` - Create pitch (uses `sp_CreatePitch` with validation)
+- `PUT /api/pitchmatch/:id` - Update pitch status (Accept/Reject)
 - `DELETE /api/pitchmatch/:id` - Delete pitch
 
+### Message Endpoints
+- `GET /api/message` - Get all messages
+- `GET /api/message/:id` - Get message by ID
+- `GET /api/message/conversation/:type1/:id1/:type2/:id2` - Get conversation
+- `POST /api/message` - Send message
+- `DELETE /api/message/:id` - Delete message
+
 ### Analytics Endpoints
-- `GET /api/analytics/startups-per-domain` - Aggregate by domain
-- `GET /api/analytics/founders-startup-count` - Uses custom function
-- `GET /api/analytics/latest-funding-rounds` - Recent funding
-- `GET /api/analytics/total-funding-per-startup` - Funding progress
-- `GET /api/analytics/top-investors` - Investor rankings
-- `GET /api/analytics/funding-trends` - Time-series data
-- `GET /api/analytics/dashboard-summary` - Overview stats
+- `GET /api/analytics/startups-per-domain` - Startups grouped by domain
+- `GET /api/analytics/founders-startup-count` - Uses `fn_GetFounderStartupCount`
+- `GET /api/analytics/latest-funding-rounds` - Recent funding activity
+- `GET /api/analytics/total-funding-per-startup` - Funding progress per startup
+- `GET /api/analytics/top-investors` - Top investors by investment amount
+- `GET /api/analytics/funding-trends` - Time-series funding data
+- `GET /api/analytics/dashboard-summary` - Platform overview statistics
+- **Special Report Queries:**
+  - `GET /api/analytics/report/startups-with-details` - JOIN query (Startup + Founder + Domain)
+  - `GET /api/analytics/report/domain-startup-count` - AGGREGATE query (GROUP BY + COUNT)
+  - `GET /api/analytics/report/investors-by-domain/:domainName` - NESTED query (subquery with IN)
+  - `GET /api/analytics/report/available-domains` - Get all available domains
 
 ## Database Features
 
 ### Stored Procedures
-1. **sp_GetInvestorMatches(startupID)** - Returns matched investors based on domain
-2. **sp_CreatePitch(startupID, investorID, notes)** - Creates pitch with domain validation
+1. **`sp_GetInvestorMatches(founder_id)`**
+   - Returns investors matching the founder's startup domains
+   - Filters out already-pitched investors
+   - **Only returns approved investors** (checks `AdminInvestorApproval` table)
+   - Used in: Founder Dashboard → "Find Investors to Pitch"
 
-### Functions
-1. **fn_CheckInvestorApprovalStatus(investorID)** - Returns approval status
-2. **fn_GetFounderStartupCount(founderID)** - Returns startup count
+2. **`sp_CreatePitch(founder_id, investor_id)`**
+   - Creates a new pitch match with status 'Pending'
+   - **Validates no duplicate pitch exists** (SIGNAL on duplicate)
+   - Returns success message or error
+   - Used in: Founder Dashboard → "Send Pitch"
+
+### Stored Functions
+1. **`fn_CheckInvestorApprovalStatus(investor_id)`**
+   - Returns 'Approved' or 'Pending Approval'
+   - Checks existence in `AdminInvestorApproval` table
+   - Used in: Investor Dashboard stats
+
+2. **`fn_GetFounderStartupCount(founder_id)`**
+   - Returns total count of startups owned by founder
+   - Used in: Analytics dashboard
 
 ### Triggers
-1. **trg_ValidateFundingAmount** - Validates funding amount range (1 - 10,000,000)
-2. **trg_UpdateStartupFunding** - Auto-updates startup current funding
-3. **trg_AutoApproveInvestor** - Auto-approves investor on admin approval
+1. **`trg_AfterInsertFundingRound`** (AFTER INSERT on FundingRound)
+   - **Automatically updates** the `Startup.funding` column
+   - Adds new investment amount to existing total
+   - Ensures startup funding is always current
+
+2. **`trg_BeforeInsertFundingRound_CheckRange`** (BEFORE INSERT on FundingRound)
+   - **Validates investment amount** is within investor's `min_investment` and `max_investment`
+   - **SIGNAL error** if amount is outside range
+   - Prevents invalid investment amounts
+
+### Complex Queries (for Final Report)
+1. **JOIN Query** - Startups with Complete Details
+   ```sql
+   SELECT s.*, f.name AS founder_name, d.d_name AS domain_name
+   FROM Startup s
+   JOIN Founder f ON s.founder_id = f.founder_id
+   JOIN Domain d ON s.domain_id = d.domain_id
+   ```
+
+2. **AGGREGATE Query** - Domain Startup Count
+   ```sql
+   SELECT d.d_name, COUNT(s.startup_id) AS startup_count
+   FROM Domain d
+   LEFT JOIN Startup s ON d.domain_id = s.domain_id
+   GROUP BY d.domain_id, d.d_name
+   ```
+
+3. **NESTED Query** - Investors by Domain
+   ```sql
+   SELECT i.name, i.email, i.funds
+   FROM Investor i
+   WHERE i.investor_id IN (
+       SELECT id.investor_id 
+       FROM InvestorDomain id 
+       WHERE id.domain_id = (SELECT domain_id FROM Domain WHERE d_name = ?)
+   )
+   ```
 
 ## Security Features
 
+- **Password Authentication** - Secure login for all user types (founders, investors, admins)
+- **Protected Routes** - React Router protected routes with authentication context
+- **Role-Based Access Control** - Separate dashboards and permissions for each user type
 - **Prepared Statements** - All database queries use parameterized statements to prevent SQL injection
-- **Input Validation** - Express-validator middleware for request validation
+- **Transaction Safety** - Investor creation uses transactions to ensure data integrity
+- **Input Validation** - Backend validation for all user inputs
 - **CORS Configuration** - Controlled cross-origin access
-- **Environment Variables** - Sensitive credentials stored in .env files
-- **Error Handling** - Comprehensive error handling and logging
-- **Database Triggers** - Business rule enforcement at database level
+- **Environment Variables** - Sensitive credentials stored in .env files (not in repo)
+- **Error Handling** - Comprehensive error handling with appropriate HTTP status codes
+- **Database Triggers** - Business rule enforcement at database level (investment range validation)
+- **Stored Procedure Validation** - Duplicate pitch prevention via SIGNAL in `sp_CreatePitch`
 
 ## Testing
 
@@ -318,30 +433,59 @@ PORT=5000
 
 ## Sample Data
 
-The seed.sql file includes:
-- 8 Domains (Technology, Healthcare, Finance, etc.)
-- 2 Admins
-- 4 Founders
-- 4 Investors (3 approved, 1 pending)
-- 6 Startups
-- 5 Funding Rounds
-- 7 Pitch Matches
-- 6 Messages
-- 4 Admin Approvals
+The `pitchpal.sql` file includes:
+- **8 Domains**: FinTech, EdTech, HealthTech, SaaS, AI/ML, E-commerce, AgriTech, Logistics
+- **2 Admins**: System administrators with different access levels
+- **6 Founders**: Startup founders with email/password authentication
+- **6 Investors**: Investment entities with min/max investment ranges
+- **Investor Domain Preferences**: Multiple domains per investor
+- **6 Startups**: Various stages (Pre-Seed, Seed, Series A, Series B) across different domains
+- **5 Funding Rounds**: Investment transactions with auto-updated startup funding
+- **7 Pitch Matches**: Founder-Investor pitches with status (Pending, Accepted, Rejected)
+- **9 Messages**: Two-way communication between founders and investors
+- **6 Admin Approvals**: Investor approval records
+- **3 Message Moderations**: Admin moderation actions (Approved, Flagged for review, Deleted)
+
+### Sample Login Credentials:
+- **Founder**: arjun@startup.com / password
+- **Investor**: anilvc@invest.com / password
+- **Admin**: super@pitchpal.com / (use name "SuperAdmin" as password)
 
 ## Usage Examples
 
-### View Founder Dashboard
-Navigate to `http://localhost:3000/founder/1` to view John Doe's dashboard
+### 1. Register & Login
+1. Navigate to `http://localhost:3000`
+2. Click "Register" to create a new account (Founder or Investor)
+3. Login with your email and password
 
-### View Investor Dashboard
-Navigate to `http://localhost:3000/investor/1` to view Tech Ventures dashboard
+### 2. Founder Workflow
+1. Login as Founder: `arjun@startup.com` / `password`
+2. View dashboard at `http://localhost:3000/founder/1`
+3. **Create Startup**: Click "Add New Startup", fill details
+4. **Find Investors**: Click "Find Investors to Pitch"
+5. **Send Pitch**: Click "Send Pitch" to matching investors
+6. **Send Message**: After pitch acceptance, message investors
 
-### View Admin Dashboard
-Navigate to `http://localhost:3000/admin/1` to access admin functions
+### 3. Investor Workflow
+1. Login as Investor: `anilvc@invest.com` / `password`
+2. View dashboard at `http://localhost:3000/investor/1`
+3. **Review Pitches**: See pending pitches from founders
+4. **Accept/Reject**: Update pitch status
+5. **Invest in Startups**: Browse startups and invest (validated by trigger)
+6. **Message Founders**: Communicate with accepted pitch founders
 
-### View Analytics
-Navigate to `http://localhost:3000/analytics` for comprehensive platform analytics
+### 4. Admin Operations
+1. Login as Admin: `super@pitchpal.com` / `SuperAdmin`
+2. View admin panel at `http://localhost:3000/admin/1`
+3. **Approve Investors**: Review and approve pending investor registrations
+4. **Moderate Messages**: Flag/Approve/Delete messages
+5. **View Statistics**: Monitor platform activity
+
+### 5. View Analytics
+Navigate to `http://localhost:3000/analytics` for:
+- JOIN query: Startups with complete details
+- AGGREGATE query: Domain startup distribution chart
+- NESTED query: Investors filtered by domain
 
 ## Troubleshooting
 

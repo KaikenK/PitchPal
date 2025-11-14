@@ -222,20 +222,34 @@ table tr:hover {
   font-weight: 500;
 }
 
-.status-pending {
-  background: #fef3c7;
-  color: #92400e;
+.status-pending,
+.status-not-moderated {
+  background: #e5e7eb;
+  color: #374151;
 }
 
 .status-accepted,
-.status-approved {
-  background: #d1fae5;
-  color: #065f46;
+.status-approved,
+.status-reviewed {
+  background: #10b981;
+  color: #ffffff;
 }
 
-.status-rejected {
-  background: #fee2e2;
-  color: #991b1b;
+.status-rejected,
+.status-deleted {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.status-flagged,
+.status-flagged-for-review {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.status-moderated {
+  background: #10b981;
+  color: #ffffff;
 }
 
 /* Home page */

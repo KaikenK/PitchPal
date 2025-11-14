@@ -6,7 +6,7 @@ const db = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [admins] = await db.query(
-      'SELECT AdminID, Username, Email, FullName, CreatedAt FROM Admin'
+      'SELECT admin_id, name, email, role, access_level FROM Admin'
     );
     res.json(admins);
   } catch (error) {
@@ -18,13 +18,173 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [admins] = await db.query(
-      'SELECT AdminID, Username, Email, FullName, CreatedAt FROM Admin WHERE AdminID = ?',
+      'SELECT admin_id, name, email, role, access_level FROM Admin WHERE admin_id = ?',
       [req.params.id]
     );
     if (admins.length === 0) {
       return res.status(404).json({ error: 'Admin not found' });
     }
     res.json(admins[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get pending investor approvals
+router.get('/approvals/pending', async (req, res) => {
+  try {
+    const [investors] = await db.query(
+      `SELECT i.* FROM Investor i
+       WHERE i.investor_id NOT IN (SELECT investor_id FROM AdminInvestorApproval)`
+    );
+    res.json(investors);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all investor approvals
+router.get('/approvals/all', async (req, res) => {
+  try {
+    const [approvals] = await db.query(
+      `SELECT aia.*, i.name AS investor_name, i.email, a.name AS admin_name
+       FROM AdminInvestorApproval aia
+       JOIN Investor i ON aia.investor_id = i.investor_id
+       JOIN Admin a ON aia.admin_id = a.admin_id
+       ORDER BY aia.approval_date DESC`
+    );
+    res.json(approvals);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve investor
+router.post('/approvals', async (req, res) => {
+  const { admin_id, investor_id } = req.body;
+  try {
+    const [result] = await db.query(
+      'INSERT INTO AdminInvestorApproval (admin_id, investor_id) VALUES (?, ?)',
+      [admin_id, investor_id]
+    );
+    res.status(201).json({ message: 'Investor approved successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update approval
+router.put('/approvals/:id', async (req, res) => {
+  const { admin_id, investor_id } = req.body;
+  try {
+    const [result] = await db.query(
+      'UPDATE AdminInvestorApproval SET admin_id = ?, investor_id = ? WHERE admin_id = ? AND investor_id = ?',
+      [admin_id, investor_id, req.params.id, req.body.old_investor_id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Approval not found' });
+    }
+    res.json({ message: 'Approval updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all messages
+router.get('/messages/all', async (req, res) => {
+  try {
+    const [messages] = await db.query(
+      `SELECT m.*, i.name AS investor_name, f.name AS founder_name,
+       EXISTS(SELECT 1 FROM MessageModeration mm WHERE mm.m_id = m.m_id) AS is_moderated,
+       mm.action AS moderation_action
+       FROM Message m
+       LEFT JOIN Investor i ON m.investor_id = i.investor_id
+       LEFT JOIN Founder f ON m.founder_id = f.founder_id
+       LEFT JOIN MessageModeration mm ON m.m_id = mm.m_id
+       ORDER BY m.timestamp DESC`
+    );
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get unmoderated messages
+router.get('/messages/unmoderated', async (req, res) => {
+  try {
+    const [messages] = await db.query(
+      `SELECT m.*, i.name AS investor_name, f.name AS founder_name
+       FROM Message m
+       LEFT JOIN Investor i ON m.investor_id = i.investor_id
+       LEFT JOIN Founder f ON m.founder_id = f.founder_id
+       WHERE m.m_id NOT IN (SELECT m_id FROM MessageModeration)
+       ORDER BY m.timestamp DESC`
+    );
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Moderate a message
+router.post('/messages/moderate', async (req, res) => {
+  const { m_id, admin_id, action } = req.body;
+  try {
+    await db.query(
+      'INSERT INTO MessageModeration (admin_id, m_id, action) VALUES (?, ?, ?)',
+      [admin_id, m_id, action]
+    );
+    res.status(201).json({ message: 'Message moderated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create new admin
+router.post('/', async (req, res) => {
+  const { name, email, role, access_level } = req.body;
+  try {
+    const [result] = await db.query(
+      'INSERT INTO Admin (name, email, role, access_level) VALUES (?, ?, ?, ?)',
+      [name, email, role, access_level]
+    );
+    res.status(201).json({ 
+      admin_id: result.insertId,
+      message: 'Admin created successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update admin
+router.put('/:id', async (req, res) => {
+  const { name, email, role, access_level } = req.body;
+  try {
+    const [result] = await db.query(
+      'UPDATE Admin SET name = ?, email = ?, role = ?, access_level = ? WHERE admin_id = ?',
+      [name, email, role, access_level, req.params.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+    res.json({ message: 'Admin updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete admin
+router.delete('/:id', async (req, res) => {
+  try {
+    const [result] = await db.query(
+      'DELETE FROM Admin WHERE admin_id = ?',
+      [req.params.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+    res.json({ message: 'Admin deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

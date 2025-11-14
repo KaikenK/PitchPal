@@ -6,11 +6,10 @@ const db = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [startups] = await db.query(
-      `SELECT s.*, d.DomainName, f.FullName AS FounderName
+      `SELECT s.*, d.d_name, f.name AS founder_name
        FROM Startup s
-       JOIN Domain d ON s.DomainID = d.DomainID
-       JOIN Founder f ON s.FounderID = f.FounderID
-       ORDER BY s.CreatedAt DESC`
+       JOIN Domain d ON s.domain_id = d.domain_id
+       JOIN Founder f ON s.founder_id = f.founder_id`
     );
     res.json(startups);
   } catch (error) {
@@ -22,11 +21,11 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [startups] = await db.query(
-      `SELECT s.*, d.DomainName, f.FullName AS FounderName, f.Email AS FounderEmail
+      `SELECT s.*, d.d_name, f.name AS founder_name, f.email AS founder_email
        FROM Startup s
-       JOIN Domain d ON s.DomainID = d.DomainID
-       JOIN Founder f ON s.FounderID = f.FounderID
-       WHERE s.StartupID = ?`,
+       JOIN Domain d ON s.domain_id = d.domain_id
+       JOIN Founder f ON s.founder_id = f.founder_id
+       WHERE s.startup_id = ?`,
       [req.params.id]
     );
     if (startups.length === 0) {
@@ -42,11 +41,11 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/funding-rounds', async (req, res) => {
   try {
     const [rounds] = await db.query(
-      `SELECT fr.*, i.FullName AS InvestorName
+      `SELECT fr.*, i.name AS investor_name
        FROM FundingRound fr
-       JOIN Investor i ON fr.InvestorID = i.InvestorID
-       WHERE fr.StartupID = ?
-       ORDER BY fr.RoundDate DESC`,
+       JOIN Investor i ON fr.investor_id = i.investor_id
+       WHERE fr.startup_id = ?
+       ORDER BY fr.date DESC`,
       [req.params.id]
     );
     res.json(rounds);
@@ -55,33 +54,16 @@ router.get('/:id/funding-rounds', async (req, res) => {
   }
 });
 
-// Get startup pitch matches
-router.get('/:id/pitches', async (req, res) => {
-  try {
-    const [pitches] = await db.query(
-      `SELECT pm.*, i.FullName AS InvestorName
-       FROM PitchMatch pm
-       JOIN Investor i ON pm.InvestorID = i.InvestorID
-       WHERE pm.StartupID = ?
-       ORDER BY pm.PitchDate DESC`,
-      [req.params.id]
-    );
-    res.json(pitches);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Create new startup
 router.post('/', async (req, res) => {
-  const { FounderID, DomainID, StartupName, Description, FundingGoal, Stage } = req.body;
+  const { founder_id, domain_id, name, stage, description } = req.body;
   try {
     const [result] = await db.query(
-      'INSERT INTO Startup (FounderID, DomainID, StartupName, Description, FundingGoal, Stage) VALUES (?, ?, ?, ?, ?, ?)',
-      [FounderID, DomainID, StartupName, Description, FundingGoal, Stage]
+      'INSERT INTO Startup (founder_id, domain_id, name, stage, description) VALUES (?, ?, ?, ?, ?)',
+      [founder_id, domain_id, name, stage, description]
     );
     res.status(201).json({ 
-      StartupID: result.insertId,
+      startup_id: result.insertId,
       message: 'Startup created successfully'
     });
   } catch (error) {
@@ -91,11 +73,11 @@ router.post('/', async (req, res) => {
 
 // Update startup
 router.put('/:id', async (req, res) => {
-  const { StartupName, Description, FundingGoal, Stage, DomainID } = req.body;
+  const { name, description, stage, domain_id } = req.body;
   try {
     const [result] = await db.query(
-      'UPDATE Startup SET StartupName = ?, Description = ?, FundingGoal = ?, Stage = ?, DomainID = ? WHERE StartupID = ?',
-      [StartupName, Description, FundingGoal, Stage, DomainID, req.params.id]
+      'UPDATE Startup SET name = ?, description = ?, stage = ?, domain_id = ? WHERE startup_id = ?',
+      [name, description, stage, domain_id, req.params.id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Startup not found' });
@@ -110,7 +92,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const [result] = await db.query(
-      'DELETE FROM Startup WHERE StartupID = ?',
+      'DELETE FROM Startup WHERE startup_id = ?',
       [req.params.id]
     );
     if (result.affectedRows === 0) {

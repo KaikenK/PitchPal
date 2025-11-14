@@ -6,11 +6,11 @@ const db = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [rounds] = await db.query(
-      `SELECT fr.*, s.StartupName, i.FullName AS InvestorName
+      `SELECT fr.*, s.name AS startup_name, i.name AS investor_name
        FROM FundingRound fr
-       JOIN Startup s ON fr.StartupID = s.StartupID
-       JOIN Investor i ON fr.InvestorID = i.InvestorID
-       ORDER BY fr.RoundDate DESC`
+       JOIN Startup s ON fr.startup_id = s.startup_id
+       JOIN Investor i ON fr.investor_id = i.investor_id
+       ORDER BY fr.date DESC`
     );
     res.json(rounds);
   } catch (error) {
@@ -22,11 +22,11 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [rounds] = await db.query(
-      `SELECT fr.*, s.StartupName, i.FullName AS InvestorName
+      `SELECT fr.*, s.name AS startup_name, i.name AS investor_name
        FROM FundingRound fr
-       JOIN Startup s ON fr.StartupID = s.StartupID
-       JOIN Investor i ON fr.InvestorID = i.InvestorID
-       WHERE fr.FundingRoundID = ?`,
+       JOIN Startup s ON fr.startup_id = s.startup_id
+       JOIN Investor i ON fr.investor_id = i.investor_id
+       WHERE fr.funding_round_id = ?`,
       [req.params.id]
     );
     if (rounds.length === 0) {
@@ -40,14 +40,14 @@ router.get('/:id', async (req, res) => {
 
 // Create new funding round (with trigger validation)
 router.post('/', async (req, res) => {
-  const { StartupID, InvestorID, Amount, Notes } = req.body;
+  const { startup_id, investor_id, amount, date } = req.body;
   try {
     const [result] = await db.query(
-      'INSERT INTO FundingRound (StartupID, InvestorID, Amount, Notes) VALUES (?, ?, ?, ?)',
-      [StartupID, InvestorID, Amount, Notes]
+      'INSERT INTO FundingRound (startup_id, investor_id, amount, date) VALUES (?, ?, ?, ?)',
+      [startup_id, investor_id, amount, date || new Date()]
     );
     res.status(201).json({ 
-      FundingRoundID: result.insertId,
+      funding_round_id: result.insertId,
       message: 'Funding round created successfully'
     });
   } catch (error) {
@@ -61,11 +61,11 @@ router.post('/', async (req, res) => {
 
 // Update funding round
 router.put('/:id', async (req, res) => {
-  const { Amount, Notes } = req.body;
+  const { amount, date } = req.body;
   try {
     const [result] = await db.query(
-      'UPDATE FundingRound SET Amount = ?, Notes = ? WHERE FundingRoundID = ?',
-      [Amount, Notes, req.params.id]
+      'UPDATE FundingRound SET amount = ?, date = ? WHERE funding_round_id = ?',
+      [amount, date, req.params.id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Funding round not found' });
@@ -80,7 +80,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const [result] = await db.query(
-      'DELETE FROM FundingRound WHERE FundingRoundID = ?',
+      'DELETE FROM FundingRound WHERE funding_round_id = ?',
       [req.params.id]
     );
     if (result.affectedRows === 0) {
