@@ -6,7 +6,7 @@ const db = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [founders] = await db.query(
-      'SELECT FounderID, Username, Email, FullName, Bio, CreatedAt FROM Founder'
+      'SELECT founder_id, name, email, password FROM Founder'
     );
     res.json(founders);
   } catch (error) {
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [founders] = await db.query(
-      'SELECT FounderID, Username, Email, FullName, Bio, CreatedAt FROM Founder WHERE FounderID = ?',
+      'SELECT founder_id, name, email FROM Founder WHERE founder_id = ?',
       [req.params.id]
     );
     if (founders.length === 0) {
@@ -34,10 +34,10 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/startups', async (req, res) => {
   try {
     const [startups] = await db.query(
-      `SELECT s.*, d.DomainName 
+      `SELECT s.*, d.d_name 
        FROM Startup s
-       JOIN Domain d ON s.DomainID = d.DomainID
-       WHERE s.FounderID = ?`,
+       JOIN Domain d ON s.domain_id = d.domain_id
+       WHERE s.founder_id = ?`,
       [req.params.id]
     );
     res.json(startups);
@@ -59,12 +59,25 @@ router.get('/:id/startup-count', async (req, res) => {
   }
 });
 
+// Get matched investors for founder
+router.get('/:id/matches', async (req, res) => {
+  try {
+    const [matches] = await db.query(
+      'CALL sp_GetInvestorMatches(?)',
+      [req.params.id]
+    );
+    res.json(matches[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get matched investors for founder's startup
 router.get('/:founderId/startup/:startupId/matches', async (req, res) => {
   try {
     const [matches] = await db.query(
       'CALL sp_GetInvestorMatches(?)',
-      [req.params.startupId]
+      [req.params.founderId]
     );
     res.json(matches[0]);
   } catch (error) {
@@ -76,12 +89,11 @@ router.get('/:founderId/startup/:startupId/matches', async (req, res) => {
 router.get('/:id/pitches', async (req, res) => {
   try {
     const [pitches] = await db.query(
-      `SELECT pm.*, s.StartupName, i.FullName AS InvestorName
+      `SELECT pm.*, i.name AS investor_name
        FROM PitchMatch pm
-       JOIN Startup s ON pm.StartupID = s.StartupID
-       JOIN Investor i ON pm.InvestorID = i.InvestorID
-       WHERE s.FounderID = ?
-       ORDER BY pm.PitchDate DESC`,
+       JOIN Investor i ON pm.investor_id = i.investor_id
+       WHERE pm.founder_id = ?
+       ORDER BY pm.pitch_date DESC`,
       [req.params.id]
     );
     res.json(pitches);
@@ -94,18 +106,14 @@ router.get('/:id/pitches', async (req, res) => {
 router.get('/:id/messages', async (req, res) => {
   try {
     const [messages] = await db.query(
-      `SELECT m.*, 
-       CASE 
-         WHEN m.SenderType = 'Investor' THEN i.FullName
-         ELSE f.FullName
-       END AS SenderName
+      `SELECT m.*, i.name AS investor_name, f.name AS founder_name,
+       EXISTS(SELECT 1 FROM MessageModeration mm WHERE mm.m_id = m.m_id) AS is_moderated
        FROM Message m
-       LEFT JOIN Investor i ON m.SenderType = 'Investor' AND m.SenderID = i.InvestorID
-       LEFT JOIN Founder f ON m.SenderType = 'Founder' AND m.SenderID = f.FounderID
-       WHERE (m.ReceiverType = 'Founder' AND m.ReceiverID = ?)
-          OR (m.SenderType = 'Founder' AND m.SenderID = ?)
-       ORDER BY m.SentAt DESC`,
-      [req.params.id, req.params.id]
+       LEFT JOIN Investor i ON m.investor_id = i.investor_id
+       LEFT JOIN Founder f ON m.founder_id = f.founder_id
+       WHERE m.founder_id = ?
+       ORDER BY m.timestamp DESC`,
+      [req.params.id]
     );
     res.json(messages);
   } catch (error) {
@@ -115,14 +123,14 @@ router.get('/:id/messages', async (req, res) => {
 
 // Create new founder
 router.post('/', async (req, res) => {
-  const { Username, Email, PasswordHash, FullName, Bio } = req.body;
+  const { name, email, password } = req.body;
   try {
     const [result] = await db.query(
-      'INSERT INTO Founder (Username, Email, PasswordHash, FullName, Bio) VALUES (?, ?, ?, ?, ?)',
-      [Username, Email, PasswordHash, FullName, Bio]
+      'INSERT INTO Founder (name, email, password) VALUES (?, ?, ?)',
+      [name, email, password]
     );
     res.status(201).json({ 
-      FounderID: result.insertId,
+      founder_id: result.insertId,
       message: 'Founder created successfully'
     });
   } catch (error) {
@@ -132,11 +140,11 @@ router.post('/', async (req, res) => {
 
 // Update founder
 router.put('/:id', async (req, res) => {
-  const { FullName, Bio, Email } = req.body;
+  const { name, email } = req.body;
   try {
     const [result] = await db.query(
-      'UPDATE Founder SET FullName = ?, Bio = ?, Email = ? WHERE FounderID = ?',
-      [FullName, Bio, Email, req.params.id]
+      'UPDATE Founder SET name = ?, email = ? WHERE founder_id = ?',
+      [name, email, req.params.id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Founder not found' });
@@ -151,7 +159,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const [result] = await db.query(
-      'DELETE FROM Founder WHERE FounderID = ?',
+      'DELETE FROM Founder WHERE founder_id = ?',
       [req.params.id]
     );
     if (result.affectedRows === 0) {

@@ -5,7 +5,7 @@ const db = require('../config/database');
 // Get all domains
 router.get('/', async (req, res) => {
   try {
-    const [domains] = await db.query('SELECT * FROM Domain ORDER BY DomainName');
+    const [domains] = await db.query('SELECT * FROM Domain ORDER BY d_name');
     res.json(domains);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [domains] = await db.query(
-      'SELECT * FROM Domain WHERE DomainID = ?',
+      'SELECT * FROM Domain WHERE domain_id = ?',
       [req.params.id]
     );
     if (domains.length === 0) {
@@ -32,11 +32,10 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/startups', async (req, res) => {
   try {
     const [startups] = await db.query(
-      `SELECT s.*, f.FullName AS FounderName
+      `SELECT s.*, f.name AS founder_name
        FROM Startup s
-       JOIN Founder f ON s.FounderID = f.FounderID
-       WHERE s.DomainID = ?
-       ORDER BY s.CreatedAt DESC`,
+       JOIN Founder f ON s.founder_id = f.founder_id
+       WHERE s.domain_id = ?`,
       [req.params.id]
     );
     res.json(startups);
@@ -47,14 +46,14 @@ router.get('/:id/startups', async (req, res) => {
 
 // Create new domain
 router.post('/', async (req, res) => {
-  const { DomainName, Description } = req.body;
+  const { d_name } = req.body;
   try {
     const [result] = await db.query(
-      'INSERT INTO Domain (DomainName, Description) VALUES (?, ?)',
-      [DomainName, Description]
+      'INSERT INTO Domain (d_name) VALUES (?)',
+      [d_name]
     );
     res.status(201).json({ 
-      DomainID: result.insertId,
+      domain_id: result.insertId,
       message: 'Domain created successfully'
     });
   } catch (error) {
@@ -64,11 +63,11 @@ router.post('/', async (req, res) => {
 
 // Update domain
 router.put('/:id', async (req, res) => {
-  const { DomainName, Description } = req.body;
+  const { d_name } = req.body;
   try {
     const [result] = await db.query(
-      'UPDATE Domain SET DomainName = ?, Description = ? WHERE DomainID = ?',
-      [DomainName, Description, req.params.id]
+      'UPDATE Domain SET d_name = ? WHERE domain_id = ?',
+      [d_name, req.params.id]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Domain not found' });
@@ -83,7 +82,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const [result] = await db.query(
-      'DELETE FROM Domain WHERE DomainID = ?',
+      'DELETE FROM Domain WHERE domain_id = ?',
       [req.params.id]
     );
     if (result.affectedRows === 0) {

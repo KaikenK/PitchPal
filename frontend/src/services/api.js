@@ -15,7 +15,7 @@ export const founderAPI = {
   getById: (id) => api.get(`/founder/${id}`),
   getStartups: (id) => api.get(`/founder/${id}/startups`),
   getStartupCount: (id) => api.get(`/founder/${id}/startup-count`),
-  getMatches: (founderId, startupId) => api.get(`/founder/${founderId}/startup/${startupId}/matches`),
+  getMatches: (founderId) => api.get(`/founder/${founderId}/matches`),
   getPitches: (id) => api.get(`/founder/${id}/pitches`),
   getMessages: (id) => api.get(`/founder/${id}/messages`),
   create: (data) => api.post('/founder', data),
@@ -35,7 +35,7 @@ export const investorAPI = {
   getPitches: (id) => api.get(`/investor/${id}/pitches`),
   getMessages: (id) => api.get(`/investor/${id}/messages`),
   create: (data) => api.post('/investor', data),
-  addDomain: (id, domainId) => api.post(`/investor/${id}/domains`, { DomainID: domainId }),
+  addDomain: (id, domainId) => api.post(`/investor/${id}/domains`, { domain_id: domainId }),
   update: (id, data) => api.put(`/investor/${id}`, data),
   delete: (id) => api.delete(`/investor/${id}`),
 };
@@ -103,6 +103,7 @@ export const messageAPI = {
   getConversation: (type1, id1, type2, id2) => 
     api.get(`/message/conversation/${type1}/${id1}/${type2}/${id2}`),
   send: (data) => api.post('/message', data),
+  create: (data) => api.post('/message', data), // Alias for send
   delete: (id) => api.delete(`/message/${id}`),
 };
 
@@ -117,6 +118,12 @@ export const analyticsAPI = {
   getStartupStageDistribution: () => api.get('/analytics/startup-stage-distribution'),
   getPitchSuccessRate: () => api.get('/analytics/pitch-success-rate'),
   getDashboardSummary: () => api.get('/analytics/dashboard-summary'),
+  
+  // Special Report Queries
+  getStartupsWithDetails: () => api.get('/analytics/report/startups-with-details'),
+  getDomainStartupCount: () => api.get('/analytics/report/domain-startup-count'),
+  getInvestorsByDomain: (domainName) => api.get(`/analytics/report/investors-by-domain/${domainName}`),
+  getAvailableDomains: () => api.get('/analytics/report/available-domains'),
 };
 
 export default api;

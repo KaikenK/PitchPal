@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { adminAPI, investorAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 function AdminDashboard() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [admin, setAdmin] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [allApprovals, setAllApprovals] = useState([]);
@@ -11,6 +14,11 @@ function AdminDashboard() {
   const [allMessages, setAllMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('approvals');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     loadData();
@@ -46,10 +54,9 @@ function AdminDashboard() {
   const handleApproval = async (investorId, status) => {
     try {
       await adminAPI.createApproval({
-        AdminID: id,
-        InvestorID: investorId,
-        ApprovalStatus: status,
-        Notes: `${status} by admin`
+        admin_id: id,
+        investor_id: investorId,
+        approval_status: status
       });
       alert(`Investor ${status.toLowerCase()} successfully!`);
       loadData();
@@ -61,10 +68,9 @@ function AdminDashboard() {
   const handleModeration = async (messageId, action) => {
     try {
       await adminAPI.moderateMessage({
-        MessageID: messageId,
-        AdminID: id,
-        Action: action,
-        Reason: `Message ${action.toLowerCase()} by admin`
+        m_id: messageId,
+        admin_id: id,
+        action: action
       });
       alert('Message moderated successfully!');
       loadData();
@@ -85,14 +91,14 @@ function AdminDashboard() {
     <div className="dashboard-container">
       <div className="navbar">
         <h1>⚙️ Admin Dashboard</h1>
-        <Link to="/">Home</Link>
         <Link to="/analytics">Analytics</Link>
+        <button onClick={handleLogout}>Logout</button>
       </div>
 
       <div className="container">
         <div className="card">
-          <h2>Welcome, {admin.FullName}!</h2>
-          <p><strong>Email:</strong> {admin.Email}</p>
+          <h2>Welcome, {admin.name}!</h2>
+          <p><strong>Email:</strong> {admin.email}</p>
           <p><strong>Role:</strong> Administrator</p>
         </div>
 
@@ -150,25 +156,25 @@ function AdminDashboard() {
                     </thead>
                     <tbody>
                       {pendingApprovals.map(approval => (
-                        <tr key={approval.ApprovalID}>
-                          <td>{approval.FullName}</td>
-                          <td>{approval.Email}</td>
-                          <td>${Number(approval.TotalInvestmentCapacity).toLocaleString()}</td>
+                        <tr key={approval.approval_id}>
+                          <td>{approval.name}</td>
+                          <td>{approval.email}</td>
+                          <td>${Number(approval.funds || 0).toLocaleString()}</td>
                           <td>
                             <span className="status-badge status-pending">
-                              {approval.ApprovalStatus}
+                              {approval.approval_status}
                             </span>
                           </td>
                           <td>
                             <button 
                               className="btn btn-success"
-                              onClick={() => handleApproval(approval.InvestorID, 'Approved')}
+                              onClick={() => handleApproval(approval.investor_id, 'Approved')}
                             >
                               Approve
                             </button>
                             <button 
                               className="btn btn-danger"
-                              onClick={() => handleApproval(approval.InvestorID, 'Rejected')}
+                              onClick={() => handleApproval(approval.investor_id, 'Rejected')}
                             >
                               Reject
                             </button>
@@ -191,21 +197,19 @@ function AdminDashboard() {
                       <th>Admin</th>
                       <th>Status</th>
                       <th>Date</th>
-                      <th>Notes</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allApprovals.map(approval => (
-                      <tr key={approval.ApprovalID}>
-                        <td>{approval.FullName}</td>
-                        <td>{approval.AdminName}</td>
+                      <tr key={approval.approval_id}>
+                        <td>{approval.investor_name}</td>
+                        <td>{approval.admin_name}</td>
                         <td>
-                          <span className={`status-badge status-${approval.ApprovalStatus.toLowerCase()}`}>
-                            {approval.ApprovalStatus}
+                          <span className={`status-badge status-${approval.approval_status ? approval.approval_status.toLowerCase() : 'pending'}`}>
+                            {approval.approval_status}
                           </span>
                         </td>
-                        <td>{new Date(approval.ApprovalDate).toLocaleDateString()}</td>
-                        <td>{approval.Notes}</td>
+                        <td>{new Date(approval.approval_date).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -235,27 +239,35 @@ function AdminDashboard() {
                     </thead>
                     <tbody>
                       {unmoderatedMessages.map(message => (
-                        <tr key={message.MessageID}>
-                          <td>{message.SenderName}</td>
-                          <td>{message.ReceiverName}</td>
-                          <td>{message.MessageContent}</td>
-                          <td>{new Date(message.SentAt).toLocaleDateString()}</td>
+                        <tr key={message.m_id}>
+                          <td>
+                            {message.sender_type === 'Founder' 
+                              ? message.founder_name 
+                              : message.investor_name}
+                          </td>
+                          <td>
+                            {message.sender_type === 'Founder' 
+                              ? message.investor_name 
+                              : message.founder_name}
+                          </td>
+                          <td>{message.content}</td>
+                          <td>{new Date(message.timestamp).toLocaleDateString()}</td>
                           <td>
                             <button 
                               className="btn btn-success"
-                              onClick={() => handleModeration(message.MessageID, 'Approved')}
+                              onClick={() => handleModeration(message.m_id, 'Approved')}
                             >
                               Approve
                             </button>
                             <button 
                               className="btn btn-warning"
-                              onClick={() => handleModeration(message.MessageID, 'Flagged')}
+                              onClick={() => handleModeration(message.m_id, 'Flagged for review')}
                             >
                               Flag
                             </button>
                             <button 
                               className="btn btn-danger"
-                              onClick={() => handleModeration(message.MessageID, 'Deleted')}
+                              onClick={() => handleModeration(message.m_id, 'Deleted')}
                             >
                               Delete
                             </button>
@@ -278,17 +290,33 @@ function AdminDashboard() {
                       <th>To</th>
                       <th>Message</th>
                       <th>Date</th>
-                      <th>Moderated</th>
+                      <th>Moderation Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allMessages.map(message => (
-                      <tr key={message.MessageID}>
-                        <td>{message.SenderName}</td>
-                        <td>{message.ReceiverName}</td>
-                        <td>{message.MessageContent}</td>
-                        <td>{new Date(message.SentAt).toLocaleDateString()}</td>
-                        <td>{message.IsModerated ? '✓' : '✗'}</td>
+                      <tr key={message.m_id}>
+                        <td>
+                          {message.sender_type === 'Founder' 
+                            ? message.founder_name 
+                            : message.investor_name}
+                        </td>
+                        <td>
+                          {message.sender_type === 'Founder' 
+                            ? message.investor_name 
+                            : message.founder_name}
+                        </td>
+                        <td>{message.content}</td>
+                        <td>{new Date(message.timestamp).toLocaleDateString()}</td>
+                        <td>
+                          {message.is_moderated ? (
+                            <span className={`status-badge status-${message.moderation_action?.toLowerCase().replace(' ', '-') || 'moderated'}`}>
+                              {message.moderation_action || 'Reviewed'}
+                            </span>
+                          ) : (
+                            <span className="status-badge status-pending">Not Moderated</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

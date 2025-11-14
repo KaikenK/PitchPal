@@ -45,11 +45,11 @@ function Home() {
           <div style={{ marginTop: '1rem' }}>
             {founders.slice(0, 5).map(founder => (
               <Link 
-                key={founder.FounderID} 
-                to={`/founder/${founder.FounderID}`}
+                key={founder.founder_id} 
+                to={`/founder/${founder.founder_id}`}
                 style={{ display: 'block', margin: '0.5rem 0' }}
               >
-                {founder.FullName}
+                {founder.name}
               </Link>
             ))}
           </div>
@@ -61,11 +61,11 @@ function Home() {
           <div style={{ marginTop: '1rem' }}>
             {investors.slice(0, 5).map(investor => (
               <Link 
-                key={investor.InvestorID} 
-                to={`/investor/${investor.InvestorID}`}
+                key={investor.investor_id} 
+                to={`/investor/${investor.investor_id}`}
                 style={{ display: 'block', margin: '0.5rem 0' }}
               >
-                {investor.FullName}
+                {investor.name}
               </Link>
             ))}
           </div>
@@ -77,11 +77,11 @@ function Home() {
           <div style={{ marginTop: '1rem' }}>
             {admins.slice(0, 5).map(admin => (
               <Link 
-                key={admin.AdminID} 
-                to={`/admin/${admin.AdminID}`}
+                key={admin.admin_id} 
+                to={`/admin/${admin.admin_id}`}
                 style={{ display: 'block', margin: '0.5rem 0' }}
               >
-                {admin.FullName}
+                {admin.name}
               </Link>
             ))}
           </div>

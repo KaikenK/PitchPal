@@ -95,8 +95,7 @@ PitchPal/
 │   └── package.json             # Frontend dependencies
 │
 ├── database/
-│   ├── schema.sql               # Database schema with procedures/functions
-│   └── seed.sql                 # Sample data
+│   └── pitchpal.sql             # Complete database schema, data, procedures, functions, and triggers
 │
 ├── .env.example                 # Environment configuration template
 └── README.md                    # This file
@@ -130,16 +129,24 @@ brew services start mysql
 ```
 
 #### Create Database and Load Schema
+
+**Option 1: Using command line redirection (from PitchPal directory)**
 ```bash
-mysql -u root -p < database/schema.sql
-mysql -u root -p < database/seed.sql
+mysql -u root -p < database/pitchpal.sql
 ```
 
-Or using MySQL command line:
-```sql
-source /path/to/PitchPal/database/schema.sql;
-source /path/to/PitchPal/database/seed.sql;
+**Option 2: Using MySQL command line**
+```bash
+# First, login to MySQL
+mysql -u root -p
+
+# Then, once inside MySQL prompt:
 ```
+```sql
+source C:/Users/YOUR_USERNAME/path/to/PitchPal/database/pitchpal.sql;
+```
+
+**For Windows users:** Replace `/path/to/PitchPal` with your actual path using forward slashes (e.g., `C:/Users/dhruv/OneDrive/Desktop/DBMS/PitchPal/database/pitchpal.sql`)
 
 ### 3. Backend Setup
 
