@@ -364,37 +364,7 @@ Frontend will run on `http://localhost:3000`
    FROM Domain d
    LEFT JOIN Startup s ON d.domain_id = s.domain_id
    GROUP BY d.domain_id, d.d_name
-   ```
-
-3. **NESTED Query** - Investors by Domain
-   ```sql
-   SELECT i.name, i.email, i.funds
-   FROM Investor i
-   WHERE i.investor_id IN (
-       SELECT id.investor_id 
-       FROM InvestorDomain id 
-       WHERE id.domain_id = (SELECT domain_id FROM Domain WHERE d_name = ?)
-   )
-   ```
-
-## Security Features
-
-- **Password Authentication** - Secure login for all user types (founders, investors, admins)
-- **Protected Routes** - React Router protected routes with authentication context
-- **Role-Based Access Control** - Separate dashboards and permissions for each user type
-- **Prepared Statements** - All database queries use parameterized statements to prevent SQL injection
-- **Transaction Safety** - Investor creation uses transactions to ensure data integrity
-- **Input Validation** - Backend validation for all user inputs
-- **CORS Configuration** - Controlled cross-origin access
-- **Environment Variables** - Sensitive credentials stored in .env files (not in repo)
-- **Error Handling** - Comprehensive error handling with appropriate HTTP status codes
-- **Database Triggers** - Business rule enforcement at database level (investment range validation)
-- **Stored Procedure Validation** - Duplicate pitch prevention via SIGNAL in `sp_CreatePitch`
-
-## Testing
-
-### Backend
-```bash
+ 
 cd backend
 npm test
 ```
